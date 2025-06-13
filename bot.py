@@ -3,7 +3,7 @@ from my_token import TOKEN
 import sqlite3
 
 bot = telebot.TeleBot(TOKEN)
-DB_path = "product.db"
+DB_path = "Parser/product.db"
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -29,3 +29,10 @@ def product(message):
 
     if result:
         name, image_path = result
+        with open(f'Parser//{image_path}', "rb") as image:
+            bot.send_photo(message.chat.id, image)
+            bot.send_message(message.chat.id, name)
+    else:
+        bot.send_message(message.chat.id, "Результат по данному запросу не был найден")
+
+bot.polling()
