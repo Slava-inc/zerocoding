@@ -177,4 +177,127 @@ class RussianAI:
         logger.info("История диалога очищена")  # Логирование события
         return True  # Подтверждение успешного выполнения
 
+def start(update: Update, context: CallbackContext) -> None:
+    logger.info(f'command /start getten')
+
+    help_text = (
+        "🤖 Привет! Я российский AI-ассистент. Могу ответить на ваши вопросы с помощью:\n"
+        f"• YandexGPT ({ai_assistant.model if ai_assistant.provider == 'yandexgpt' else 'доступен через /yandex'})\n"
+        f"• SberAI ({ai_assistant.model if ai_assistant.provider == 'sberai' else 'доступен через /sber'})\n\n"
+        "Доступные команды:\n"
+        "/yandex - использовать YandexGPT\n"
+        "/sber - использовать SberAI (GigaChat)\n"
+        "/clear - очистить историю диалога\n\n"
+        "Просто отправьте мне сообщение с вашим вопросом!"    )
+    
+    keyboard = [
+        [KeyboardButton("/yandex"), KeyboardButton("/sber")],
+        [KeyboardButton("/clear")]
+    ]
+    update.message.reply_text(
+        help_text,
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard,
+            resize_keyboard=True,
+            one_time_keyboard=False
+        )
+    )
+
+def switch_to_yandex(update: Update, context: CallbackContext) -> None:
+    if ai_assistant.set_provider("yandexgpt"):
+        update.message.reply_text(
+            f"✅ Переключено на YandexGPT ({ai_assistant.model})",
+            reply_markup=create_keyboard() # Обновление клавиатуры
+        )
+    else:
+        update.message.reply_text("❌ Не удалось переключиться на YandexGPT")
+
+
+def switch_to_sber(update: Update, context: CallbackContext) -> None:
+    if ai_assistant.set_provider("sberai"):
+        update.message.reply_text(
+            f"✅ Переключено на SberAI ({ai_assistant.model})",
+            reply_markup=create_keyboard() # Обновление клавиатуры
+        )
+    else:
+        update.message.reply_text("❌ Не удалось переключиться на SberAI")
+
+def clear_history(update: Update, context: CallbackContext) -> None:
+    if ai_assistant.clear_history():
+        update.message.reply_text(
+            "🗑️ История диалога очищена!",
+            reply_markup=create_keyboard() # Обновление клавиатуры
+        )
+    else:
+        update.message.reply_text("❌ Не удалось очистить историю")
+
+def handle_message(update: Update, context: CallbackContext) -> None:
+    user_input = update.message.text
+    if user_input.startswith('/'):
+        return
+    context.bot.send_chat_action(
+        chat_id=update.effective_chat.id, # ID текущего чата
+        action="typing"
+    )
+    start_time = time.time()
+
+    try:
+        response = ai_assistant.generate_response(user_input)
+        elapsed_time = time.time() - start_time
+        formatted_response = (
+            f"🤖 {ai_assistant.provider.upper()} отвечает:\n\n"
+            f"{response}\n\n"
+            f"⏱ Время генерации: {elapsed_time:.2f} сек"
+        )
+        update.message.reply_text(
+            formatted_response,
+            reply_markup=create_keyboard() # Отправка с клавиатуры команд
+        )
+    except Exception as e:
+        logger.error(f"Ошибка генерации ответа: {str(e)}")
+        update.message.reply_text(
+            "🚨 Произошла ошибка при генерации ответа. Попробуйте позже.",
+            reply_markup=create_keyboard()
+        )
+
+def create_keyboard():
+    keyboard = [
+        [KeyboardButton("/yandex"), KeyboardButton("/sber")],
+        [KeyboardButton("/clear")]
+    ]
+    return ReplyKeyboardMarkup(
+        keyboard,
+        resize_keyboard=True,
+        one_time_keyboard=False
+    )
+
+def main():
+    if not os.getenv("YANDEX_API_KEY") and not os.getenv("SBER_API_KEY"):
+        print("❌ ОШИБКА: Не найден ни один API ключ в .env файле!")
+        print("Добавьте ключи для Yandex или SberAI")
+        print("Пример .env файла:")
+        print("YANDEX_API_KEY=ваш_ключ_яндекс")
+        print("YANDEX_FOLDER_ID=ваш_folder_id")
+        print("SBER_API_KEY=ваш_ключ_сбер")
+        return
+    
+    TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+    logger.info(f'token loading {TOKEN}')
+
+    updater = Updater(TOKEN)
+    dispatcher = updater.dispatcher
+    dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(CommandHandler("yandex", switch_to_yandex))
+    dispatcher.add_handler(CommandHandler("sber", switch_to_sber))
+    dispatcher.add_handler(CommandHandler("clear", clear_history))
+
+    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+    updater.start_polling()
+ 
+    print("Бот успешно запущен. Используйте /start в Telegram для начала работы.")
+    updater.idle()
+
 ai_assistant = RussianAI()
+
+if __name__ == '__main__':
+    main()
