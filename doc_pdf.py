@@ -10,7 +10,7 @@ def images_to_pdf(image_files, output_pdf):
         images[0].save(output_pdf, save_all=True, append_images=images[1:])
 
 # Пример использования
-image_files = ['C50_1.png', 'C50_2.png']  # Замените на ваши файлы
-output_pdf = 'C50.pdf'
+image_files = ['C52_1.png', 'C52_2.png']  # Замените на ваши файлы
+output_pdf = 'C52.pdf'
 
 images_to_pdf(image_files, output_pdf)
