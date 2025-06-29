@@ -1,0 +1,4 @@
+timestamp,user_id,username,city,status
+2025-06-28 08:29:54.335152,1512571026,vnd_57,minsk,success2025-06-28 10:58:50.219466,1512571026,vnd_57,paris,success
+2025-06-28 10:59:10.535628,1512571026,vnd_57,london,success
+2025-06-29 10:23:44.360154,1512571026,vnd_57,orel,success
